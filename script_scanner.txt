@@ -1,0 +1,25 @@
+docker build -t port-scanner .
+
+./scan.sh --target 172.20.0.0/24 --ports 1-10000 --threads 200 --timeout 3.0
+
+
+
+docker build -t terminal_test .
+
+docker run -it --network csce413_assignment2_vulnerable_network terminal_test
+
+
+ssh 172.20.0.20 -p 2222
+
+ssh user@172.20.0.40 -p 2222
+
+
+python3 knock_client.py --target 172.20.0.40 --sequence 1234,5678,9012
+
+
+docker run --rm -it --cap-add=NET_ADMIN --cap-add=NET_RAW --network csce413_assignment2_vulnerable_network terminal_test /bin/bash
+
+
+sudo tcpdump -i br-<network-id> -s 0 -w mitm_capture.pcap port 3306
+
+
