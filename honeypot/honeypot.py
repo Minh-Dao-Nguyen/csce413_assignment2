@@ -7,13 +7,38 @@ import paramiko
 import logging
 import os
 import time
+from pathlib import Path
+import textwrap
 
 LOG_PATH = "/app/logs/honeypot.log"
 HOST = "0.0.0.0"
 PORT = 2222
 
 HOST_KEY = paramiko.RSAKey.generate(2048)
+BANNER = textwrap.dedent(
+    """
+    ╔═══════════════════════════════════════════════════════╗
+    ║                                                       ║
+    ║          🔒 SECRET SSH SERVER 🔒                      ║
+    ║                                                       ║
+    ║  You have discovered a hidden service!                ║
+    ║  Congratulations on your reconnaissance skills.       ║
+    ║                                                       ║
+    ║  Service: SSH Server                                  ║
+    ║  Port: 2222                                           ║
+    ║                                                       ║                          
+    ║                                                       ║
+    ╚═══════════════════════════════════════════════════════╝
+    """
+)
 
+COMMAND_RESPONSES = {
+    "uname -a": "Linux ip-10-0-0-5 5.4.0-110-generic #124-Ubuntu SMP x86_64 GNU/Linux\n",
+    "id": "uid=0(root) gid=0(root) groups=0(root)\n",
+    "pwd": "/root\n",
+    "ls": "bin  boot  etc  home  lib  lib64  tmp  var\n",
+    "cat /etc/passwd": "root:x:0:0:root:/root:/bin/bash\nsshd:x:110:65534::/run/sshd:/usr/sbin/nologin\n",
+}
 
 def setup_logging():
     os.makedirs("/app/logs", exist_ok=True)
@@ -28,6 +53,9 @@ def create_server_interface(addr):
     def check_auth_password(self, username, password):
         logging.info(f"[LOGIN] {addr} | user={username} pass={password}")
         return paramiko.AUTH_SUCCESSFUL
+
+    def get_banner(self):
+        return BANNER + "\n", "en-US"
 
     def get_allowed_auths(self, username):
         return "password"
@@ -52,6 +80,7 @@ def create_server_interface(addr):
             "check_channel_request": check_channel_request,
             "check_channel_shell_request": check_channel_shell_request,
             "check_channel_pty_request": check_channel_pty_request,
+            "get_banner": get_banner,
         },
     )
 
@@ -73,13 +102,15 @@ def handle_client(client, addr):
             logging.warning(f"[NO CHANNEL] {addr}")
             return
 
-        channel.send("Ubuntu 20.04 LTS\n")
-        channel.send("Last login: " + time.ctime() + "\n")
+        #channel.send("\n" + BANNER + "\r\n")
+        channel.send("SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5\r\n")
+        channel.send("Ubuntu 20.04 LTS\r\n")
+        channel.send("Last login: " + time.ctime() + "\r\n")
         channel.send("$ ")
 
         while True:
             command = ""
-            while not command.endswith("\r"):
+            while not (command.endswith("\r") or command.endswith("\n")):
                 data = channel.recv(1024).decode("utf-8")
                 if not data:
                     break
@@ -95,7 +126,13 @@ def handle_client(client, addr):
                 channel.send("logout\n")
                 break
 
-            channel.send(f"{command}: command not found\n")
+            if command in COMMAND_RESPONSES:
+                channel.send(COMMAND_RESPONSES[command])
+            elif command.startswith("curl ") or command.startswith("wget "):
+                channel.send("<html><body><h1>403 Forbidden</h1></body></html>\n")
+            else:
+                channel.send(f"{command}: command not found\n")
+
             channel.send("$ ")
 
     except Exception as e:

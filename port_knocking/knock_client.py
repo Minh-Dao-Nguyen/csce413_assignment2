@@ -14,12 +14,6 @@ def send_knock(target, port, delay):
     """Send a single knock to the target port."""
     # TODO: Choose UDP or TCP knocks based on your design.
     # Example TCP knock stub:
-    # try:
-    #     with socket.create_connection((target, port), timeout=1.0):
-    #         pass
-    # except OSError:
-    #     pass
-    # time.sleep(delay)
     print(f"[*] Sending knock to {target}:{port}...")
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(1.0)
@@ -30,6 +24,7 @@ def send_knock(target, port, delay):
     finally:
         s.close()
     time.sleep(delay)
+
 
 
 def perform_knock_sequence(target, sequence, delay):

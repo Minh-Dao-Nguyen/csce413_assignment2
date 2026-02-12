@@ -31,3 +31,10 @@ ssh -p 2222 root@localhost
 ### Extending
 - Add more canned command outputs in `COMMAND_RESPONSES` to deepen realism.
 - Tweak `SUSPICIOUS_KEYWORDS` for your environment; forward `alert` events to a SIEM if desired.
+
+### Attack simulation ideas
+- Brute-force style auth: `ssh admin@localhost -p 2222` and try multiple passwords; watch `[LOGIN]` entries in [honeypot/logs/honeypot.log](honeypot/logs/honeypot.log).
+- Credential reuse: attempt the advertised creds from the banner `ssh sshuser@localhost -p 2222` with `SecurePass2024!` to confirm session logging.
+- Command probing: run `uname -a`, `id`, `ls /`, and injection-like payloads (`; curl http://evil`, `$(whoami)`) to see `[COMMAND]` captures and fake responses.
+- Exit behavior: send `exit` or `quit` to observe disconnect handling in logs.
+- Parallel connections: open multiple SSH sessions concurrently to test thread-per-connection handling and ensure all are logged.
